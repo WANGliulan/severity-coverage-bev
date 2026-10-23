@@ -1,0 +1,24 @@
+# ---- PCPA project dependencies -------------------------------------
+# Interpreter: Python 3.13 (see README.md; 3.14 is not used because
+# opencv / scikit-learn wheels still lag behind).
+#
+# torch / torchvision are NOT listed here on purpose: they must be
+# installed from the CUDA 12.8 index (the RTX 5070 is Blackwell sm_120
+# and only cu128+ builds contain a matching kernel):
+#
+#   .\.venv\Scripts\python.exe -m pip install torch torchvision \
+#       --index-url https://download.pytorch.org/whl/cu128
+#
+numpy
+scipy
+opencv-python
+matplotlib
+pyyaml
+scikit-learn
+h5py
+pandas
+tqdm
+pillow
+# Optional: quick detection baseline with prebuilt wheels
+# (use this instead of mmdetection/mmcv, which has no cp313 wheels)
+# ultralytics

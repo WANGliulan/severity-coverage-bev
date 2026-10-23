@@ -1,0 +1,59 @@
+# Sequence -> weather condition, established from the camera frames.
+#
+# This file is separate from boreas_weather.yaml on purpose. That file labels the
+# *road surface* (dry / wet / snow / ...) because it has to imply a reference
+# friction coefficient. This one labels the *weather in the scene*, which is what
+# a per-condition breakdown needs: a sequence can be snow-covered without snow
+# falling, or icy at night, and those are different questions.
+#
+# Allowed conditions:
+#   clear      no adverse weather; surface may still be dry or wintry
+#   rain       falling rain or a visibly wet surface
+#   snowfall   snow falling, with snow cover on the driving surface
+#   night      unlit scene, headlight-only illumination
+#   low_sun    strong low-angle sun in frame, long shadows, glare
+#   fog        reduced visibility from fog or haze
+#
+# Evidence is recorded per sequence so that a label can be challenged later. It
+# comes from figures/weather_sheets/<sequence>.jpg, six stills per sequence,
+# which scripts/make_weather_sheets.py writes from the downloaded frames.
+sequences:
+  # --- snow falling (2) -------------------------------------------------
+  # Full snow cover on the carriageway, flakes visible in frame, white-out sky.
+  boreas-2021-01-26-11-22: snowfall
+  boreas-2025-02-15-16-25: snowfall
+
+  # --- rain / wet surface (2) -------------------------------------------
+  # Dark reflective tarmac with standing water and spray; heavy grey cloud.
+  boreas-2020-11-26-13-58: rain
+  # Uniformly dark, glossy tarmac over the whole drive; the stills cannot
+  # separate damp from wet asphalt, so this is the weaker of the two.
+  boreas-2021-02-02-14-07: rain
+
+  # --- night (1) --------------------------------------------------------
+  # Unlit scene, illumination from headlights only; snow at the roadside.
+  boreas-2024-12-23-17-01: night
+
+  # --- low sun / glare (2) ----------------------------------------------
+  # Sun in frame, long shadows, strong veiling glare along the road.
+  boreas-2020-12-18-13-44: low_sun
+  boreas-2025-02-22-11-24: low_sun
+
+  # --- clear (7) --------------------------------------------------------
+  # Blue sky, pale matte tarmac; snow confined to the verges.
+  boreas-2021-01-15-12-17: clear
+  # Flat white overcast, dry matte surface, no snow in frame.
+  boreas-2021-03-02-13-38: clear
+  boreas-2021-03-23-12-43: clear
+  # Summer, green vegetation, hard shadows.
+  boreas-2021-06-03-16-00: clear
+  boreas-2021-11-16-14-10: clear
+  boreas-2025-02-21-14-51: clear
+  # Clear winter days with snow on the ground and a wet carriageway.
+  boreas-2025-02-22-12-09: clear
+
+# Fog is absent from the collection. Three checks agree: no sampled frame shows
+# fog or haze, the LiDAR far-return proxy of every sequence stays inside a narrow
+# band instead of showing fog-like attenuation, and the labelled subset used for
+# the detection metric was recorded on a clear late-summer day. Fog therefore
+# appears in this study only as a simulation.

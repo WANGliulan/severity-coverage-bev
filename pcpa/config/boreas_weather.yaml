@@ -1,0 +1,65 @@
+# Sequence -> road-surface label, filled in by hand.
+#
+# Boreas has no weather annotation, so this file is the label source for the
+# cross-weather split and for the reference friction coefficient.
+# Allowed labels: dry, wet, light_rain, heavy_rain, snow, packed_snow, ice
+#
+# How to label a sequence:
+#   1. scripts/label_boreas_weather.py prints the LiDAR proxy per sequence.
+#   2. scripts/make_weather_sheets.py writes one image per sequence of real
+#      camera frames to figures/weather_sheets/ --- no video download needed.
+#   3. Look at the image, then write the label here and re-run step 1.
+#
+# The proxy is a hint, not a label. It ranks 2021-03-23 as the more adverse of
+# the two sequences labelled first, while the images show it to be the drier of
+# the two, because the far-return fraction measures how open the scene is as
+# much as it measures precipitation.
+#
+# Evidence for every label, recorded so a reading can be challenged later. All
+# spans are from the aligned download, so the stills cover nearly the whole
+# drive rather than its opening minute.
+#
+#   boreas-2020-11-26-13-58 -> wet
+#     6 stills spanning 1026.8 s of a 1035 s drive. Dark, reflective tarmac with
+#     a visible sheen and standing water; heavy grey cloud; old snow on the
+#     grass verges only, so the driving surface is wet tarmac rather than a
+#     snow-covered one.
+#
+#   boreas-2021-01-15-12-17 -> dry
+#     6 stills spanning 871.2 s. Blue sky with scattered cloud, pale tarmac that
+#     reads dry, snow confined to the verges and the ground. Winter by date, but
+#     the driving surface is clear.
+#
+#   boreas-2021-02-02-14-07 -> wet
+#     6 stills spanning 1088.9 s. Overcast; uniformly dark, glossy tarmac
+#     throughout the drive, with slush in the opening yard. Medium confidence:
+#     at this contrast a still cannot separate damp cold asphalt from wet
+#     asphalt, which is what the sequence video would settle.
+#
+#   boreas-2021-03-23-12-43 -> dry
+#     6 stills spanning 964.5 s. Flat white overcast, pale matte tarmac with no
+#     sheen and no standing water, no snow anywhere in frame.
+#
+#   boreas-2021-06-03-16-00 -> dry
+#     6 stills spanning 1026.7 s. Summer, green trees, hard shadows, dry tarmac
+#     with visible surface texture and tar lines.
+#
+#   boreas-2021-11-16-14-10 -> dry
+#     6 stills spanning 996.4 s. Overcast with dark cloud, but the tarmac is
+#     pale and matte with no sheen, no rain streaks and no spray.
+#
+# The resulting distribution is five dry and one wet. The road surface --- which
+# is what the friction reference actually refers to --- therefore varies far less
+# than the sky does: the surface-state axis is sampled at two levels, not six.
+# Sequences with rain or snow on the driving surface would have to be
+# downloaded to widen it.
+#
+# Re-running label_boreas_weather.py rewrites this file, so comments added by
+# hand do not survive it.
+sequences:
+  boreas-2020-11-26-13-58: wet
+  boreas-2021-01-15-12-17: dry
+  boreas-2021-02-02-14-07: wet
+  boreas-2021-03-23-12-43: dry
+  boreas-2021-06-03-16-00: dry
+  boreas-2021-11-16-14-10: dry

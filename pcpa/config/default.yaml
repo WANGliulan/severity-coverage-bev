@@ -1,0 +1,171 @@
+# ---------------------------------------------------------------------
+# PCPA default configuration.
+#
+# Every experiment overrides only what it needs, and each run must save
+# the fully resolved config next to its outputs (runs/<run_id>/config.yaml).
+#
+# TODO-CALIBRATE marks literature-typical values, not calibrated ones.
+# Calibrate them before claiming any absolute number, and report how
+# sensitive the conclusions are to them.
+# ---------------------------------------------------------------------
+
+project:
+  name: pcpa
+  seed: 0
+
+paths:
+  # The recordings live on D: so that they do not consume the system drive.
+  # Scripts append the dataset name, so data_raw/boreas holds the sequences.
+  data_raw: D:/数据集
+  manifest: data/manifest     # small CSV indexes stay with the code
+  degraded: data/degraded
+  runs: runs
+  figures: figures
+
+datasets:
+  # Adver-City: CARLA-rendered, 6 weather conditions, LiDAR + RGB +
+  # semantic camera + GNSS + IMU, ~24k frames, ~890k annotations.
+  advercity:
+    root: data/raw/adver-city
+    weather: [clear, soft_rain, heavy_rain, fog, foggy_heavy_rain, glare]
+  # RADIATE: real recordings, radar + stereo camera + 32-beam LiDAR + GPS;
+  # weather covers rain, fog and snow. Access is on request.
+  radiate:
+    root: data/raw/radiate
+    weather: [sun, night, rain, fog, snow]
+
+splits:
+  # CRITICAL: never split randomly --- hold out whole weather conditions,
+  # otherwise the test set leaks and the cross-weather claim is void.
+  train_weather: [clear, soft_rain, heavy_rain]
+  test_weather: [fog, foggy_heavy_rain, glare]
+
+severity:
+  levels: 5                   # s = 0 (clean) ... 4 (worst)
+  # TODO-CALIBRATE: map each level onto the per-modality parameters below.
+
+degradation:
+  camera:
+    # Koschmieder:  I = J*t + A*(1-t),  t = exp(-beta*d)
+    extinction_beta_per_m: [0.0, 0.008, 0.02, 0.05, 0.12]
+    streak_density: [0.0, 0.15, 0.35, 0.60, 0.90]
+    # Low light is two terms, not one. exposure_loss scales the radiance and
+    # read_noise_std adds noise at a magnitude that does not shrink with it, so
+    # the signal-to-noise ratio falls as the illumination does. Scaling alone
+    # would be a change any contrast-normalising model could undo, and the noise
+    # is the part that makes a dark frame hard. At s=4 only 15% of the light
+    # remains while the noise reaches a third of that, i.e. night driving: the
+    # camera branch fails outright, which is exactly the single-modality failure
+    # the framework is meant to survive.
+    #
+    # TODO-CALIBRATE: the pair was set so that a mid-grey pixel reaches
+    # SNR ~1.7 at s=4, which is night-like, rather than from a measured camera
+    # response curve. Calibrate against a real low-light exposure series before
+    # claiming absolute levels.
+    exposure_loss: [0.0, 0.15, 0.35, 0.60, 0.85]
+    read_noise_std: [0.0, 0.006, 0.012, 0.025, 0.045]
+    scene_depth_m: 30.0                 # scalar: used when no depth map
+    atmospheric_light: 0.85
+    # used by the inverse perspective mapping that gives the camera a ground
+    # footprint. Boreas: the camera sits 0.229 m below the roof LiDAR (the
+    # translation of T_camera_lidar is in the *camera* frame, down positive),
+    # so with a roof height of 1.9 m the camera is 1.67 m above the ground.
+    height_m: 1.67
+    ipm_max_range_m: 40.0
+  lidar:
+    # attenuation P ~ exp(-2*beta*d) plus spurious back-scatter returns
+    extinction_beta_per_m: [0.0, 0.006, 0.015, 0.04, 0.10]
+    spurious_return_rate: [0.0, 0.01, 0.03, 0.08, 0.15]
+    beam_dilation_rad: [0.0, 0.0005, 0.0015, 0.003, 0.006]
+    range_noise_frac: [0.0, 0.002, 0.005, 0.012, 0.025]
+    max_range_m: 200.0
+  radar:
+    clutter_to_signal_db: [0.0, 3.0, 7.0, 12.0, 18.0]
+    angular_smear_bins: [0.0, 0.6, 1.5, 3.0, 6.0]
+    looks: [4.0, 3.0, 2.0, 1.5, 1.0]
+    dynamic_range_db: 40.0
+
+surface:
+  # The quantity the contact channel must estimate. Weather sets the
+  # water-film / snow state, which makes the vision and contact
+  # degradations correlated BY CONSTRUCTION --- the case the framework
+  # is designed for.
+  #
+  # Two vocabularies share one table: the synthetic conditions of Adver-City,
+  # and the real road-surface labels used for Boreas in
+  # config/boreas_weather.yaml. Boreas labels are assigned by hand (the dataset
+  # ships no weather annotation); see scripts/label_boreas_weather.py.
+  friction_mu_by_weather:
+    # synthetic, Adver-City
+    clear: 0.90
+    soft_rain: 0.75
+    heavy_rain: 0.55
+    fog: 0.85
+    foggy_heavy_rain: 0.50
+    glare: 0.88
+    # real, Boreas
+    dry: 0.90
+    wet: 0.70
+    light_rain: 0.65
+    snow: 0.35
+    packed_snow: 0.45
+    ice: 0.20
+  water_film_mm_by_weather:
+    clear: 0.0
+    soft_rain: 0.3
+    heavy_rain: 1.5
+    fog: 0.1
+    foggy_heavy_rain: 1.8
+    glare: 0.0
+
+contact:
+  # Two-degree-of-freedom quarter-car model, per corner, plus the
+  # whole-vehicle geometry that longitudinal load transfer needs.
+  quarter_car:
+    sprung_mass_kg: 300.0                  # TODO-CALIBRATE
+    unsprung_mass_kg: 40.0                 # TODO-CALIBRATE
+    suspension_stiffness_n_per_m: 25000.0  # TODO-CALIBRATE
+    suspension_damping_ns_per_m: 1800.0    # TODO-CALIBRATE
+    tyre_stiffness_n_per_m: 200000.0       # TODO-CALIBRATE
+    total_mass_kg: 1600.0                  # TODO-CALIBRATE
+    wheelbase_m: 2.70
+    cg_height_m: 0.55
+    static_front_share: 0.60
+    brake_bias_front: 0.65
+  pacejka:
+    B: 10.0                                # TODO-CALIBRATE
+    C: 1.9
+    E: 0.97
+  fbg:
+    bragg_wavelength_nm: 1550.0
+    photoelastic_p_e: 0.22                 # so that 1 - p_e = 0.78
+    thermal_sensitivity_per_k: 6.45e-6
+    calibration_M: 1.0e-6                  # TODO-CALIBRATE: mount + cross-talk
+    interrogator_noise_pm: 1.0
+    temperature_drift_pm_per_c: 10.0
+    temperature_delta_c: 5.0
+  estimator:
+    # imperfections the estimator has to live with (see
+    # src/contact/estimate.py); these are what make the reported
+    # complementarity gain a property of the sensing principle rather
+    # than an artefact of the simulator
+    assumed_delta_t_c: 0.0
+    slip_noise_std: 0.004
+    load_noise_rel: 0.05
+    vertical_cross_talk_assumed: 0.30
+    window_samples: 200
+    # systematic per-window errors: these dominate, because they do not
+    # average out over the estimation window
+    slip_bias_rel_std: 0.15
+    load_bias_rel_std: 0.08
+    calibration_bias_rel_std: 0.10
+  # Guard against circular reasoning: the estimator must NEVER observe mu.
+  allow_true_mu_as_input: false
+
+metrics:
+  egr:
+    fit: least_squares          # slope of error against severity
+  complementarity:
+    stratify_by: severity
+  task_metrics: [AP30, AP50, AP70, bev_iou, semantic_iou]
+  surface_metric: rmse_mu

@@ -1,0 +1,31 @@
+# virtual environment
+.venv/
+pcpa/.venv/
+
+# experiment outputs: logs, checkpoints, downloaded wheels
+runs/
+pcpa/runs/
+
+# datasets are large and not versioned
+data/raw/
+data/degraded/
+data/cache/
+data/_stale/
+pcpa/data/raw/
+pcpa/data/degraded/
+pcpa/data/cache/
+pcpa/data/_stale/
+
+# keep the run records: they are what results/ is built from
+!pcpa/data/manifest/
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
