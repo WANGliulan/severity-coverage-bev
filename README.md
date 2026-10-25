@@ -58,7 +58,8 @@ results/
   summary.md       generated tables: occupancy, coverage effect, detection
   tables/*.csv     the same numbers per run, for plotting or re-analysis
   figures/*.png    IoU per level for every run; the ladder on one timestamp;
-                   one frame from each of the fourteen drives
+                   one frame from each of the fourteen drives; the radar
+                   operator check (reference only, see below)
 ```
 
 ## Quick start
@@ -108,6 +109,13 @@ python scripts/export_results.py
 - A repeated seed is **not** dropped: training is not bit-reproducible here, and two
   runs of the same command reached 0.5558 and 0.5580 at `s=4`. That scatter is the
   quantity the run-to-run comparisons are made against.
+- **Only the camera and the LiDAR are degraded.** `build_channels` in
+  `run_fusion_study.py` feeds `radar_to_bev(radars[index], ...)`, the raw sweep, so
+  the radar enters every model as recorded; radar-only IoU is therefore flat across
+  levels by construction, not by a physical claim. The operator does have a radar
+  branch (clutter, angular smear, speckle) and `scripts/make_radar_ladder.py` draws
+  it, but **no reported number uses it** --- `results/figures/radar_operator_check.png`
+  is that drawing and is labelled as a reference.
 
 ## Data
 
