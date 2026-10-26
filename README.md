@@ -14,7 +14,7 @@ parameters), and an oracle that hands the gate the true severity.
 parameters, even given the true severity, is indistinguishable from concatenation at
 the most severe level (0.634 / 0.636 / 0.636 IoU); training on levels 0–2 alone
 costs **0.087 IoU** (0.547 → 0.634), 16% relative and four times the run-to-run
-spread, and the same effect transfers to detection at 2.5× (0.060 → 0.148 mAP).
+spread, and the same effect transfers to detection at 2.3× (0.062 → 0.141 mAP).
 
 ## Results
 
@@ -30,14 +30,14 @@ same table, at the two most severe levels.
 | levels 0–4 | gate | 0.700 | 0.636 |
 | levels 0–4 | gate + oracle | 0.700 | **0.636** |
 
-Detection on the labelled subset, mAP at BEV IoU 0.5:
+Detection on the labelled subset, mAP at BEV IoU 0.5 (three runs per regime):
 
 | trained on | structure | s=3 | s=4 |
 |---|---|---:|---:|
-| levels 0–2 | concat | 0.1418 | 0.0598 |
-| levels 0–2 | gate | 0.1264 | 0.0744 |
-| levels 0–4 | concat | 0.1567 | 0.1478 |
-| levels 0–4 | gate | 0.1589 | 0.1504 |
+| levels 0–2 | concat | 0.1383 | 0.0620 |
+| levels 0–2 | gate | 0.1227 | 0.0727 |
+| levels 0–4 | concat | 0.1537 | 0.1409 |
+| levels 0–4 | gate | 0.1546 | 0.1441 |
 
 Every mean is over three or four runs; the per-run values, the spread, and the
 coverage effect per level are in `results/tables/`.
@@ -97,6 +97,19 @@ python scripts/export_results.py
 | coverage effect (+0.087) | `results/tables/coverage_effect.csv` | `export_results.py` |
 | detection mAP | `results/tables/detection_mean.csv` | `run_detection_study.py` |
 | the severity ladder itself | `pcpa/config/default.yaml` | `src/degrade/severity.py` |
+
+## Review-response checks
+
+`results/review_checks.md` collects four controls that a reviewer asked for; each is a
+separate run recorded in `pcpa/data/manifest/`, and `pcpa/scripts/analyse_review_experiments.py`
+prints them again from the records:
+
+| check | what it answers | result |
+|---|---|---|
+| capacity match | is the gate's edge just its extra parameters? | a concatenated baseline widened to 264,073 parameters (the gate's own budget) reaches 0.6284 at `s=4`, below the 0.6339 of its narrow version |
+| boundary gap | do adjacent frames across the train/test boundary inflate the result? | dropping four frames either side of every drive's boundary leaves the coverage gap intact: 0.5382 against 0.6394 |
+| severe level only | is it coverage, or simply more augmented samples? | `s=4` alone reaches 0.6460 at that level, above the full ladder's 0.6339, but collapses at the clean end (0.468 at `s=0`) |
+| detection seeds | is the gate-concat difference on detection real? | three seeds per regime: 0.1441 against 0.1409 at `s=4`, +0.003 inside a 0.012 spread across seeds |
 
 ## Protocol notes
 

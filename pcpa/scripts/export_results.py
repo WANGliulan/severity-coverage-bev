@@ -41,6 +41,12 @@ RESULTS = ROOT.parent / "results"
 FRAMES_PER_SEQUENCE = 40
 EPOCHS = 8
 SPLIT = (319, 139)
+#: Channel width of the reported models; a capacity-matched rerun (base 24) is a
+#: different experiment even though its split and epoch count match.
+BASE_CHANNELS = 16
+#: The detection protocol: 32 epochs on the 194/83 labelled split.
+DETECTION_EPOCHS = 32
+DETECTION_SPLIT = (194, 83)
 
 #: Records from before the stratified split and the final protocol.
 SUPERSEDED = frozenset({
@@ -83,6 +89,8 @@ def load_fusion() -> list[dict]:
             continue
         if arguments.get("epochs") != EPOCHS:
             continue
+        if arguments.get("base_channels", BASE_CHANNELS) != BASE_CHANNELS:
+            continue
         if path.name in SUPERSEDED:
             continue
         counts = record.get("frames", {})
@@ -100,11 +108,19 @@ def load_detection() -> list[dict]:
 
     Detection records are not filtered on the protocol constants above: their
     split is the labelled subset of one sequence, not the fourteen-sequence split
-    the occupancy runs use, and they carry their own ``args`` block.
+    the occupancy runs use, and they carry their own ``args`` block. Their own
+    protocol is 32 epochs on the 194/83 split, and a record made at a different
+    budget is skipped: an 8-epoch run reaches a visibly lower mAP and would
+    otherwise be averaged in.
     """
     records: list[dict] = []
     for path in sorted(MANIFEST.glob("detection_*.json")):
         record = json.loads(path.read_text(encoding="utf-8"))
+        if record.get("args", {}).get("epochs") != DETECTION_EPOCHS:
+            continue
+        counts = record.get("frames", {})
+        if (counts.get("train"), counts.get("test")) != DETECTION_SPLIT:
+            continue
         if not record.get("results"):
             continue
         record["_source"] = path.name

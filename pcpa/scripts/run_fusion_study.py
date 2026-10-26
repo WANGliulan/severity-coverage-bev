@@ -165,11 +165,15 @@ def asymmetric_stacks(channels, modality_levels, modalities: tuple[str, ...],
 TRAIN_FRACTION = 0.7
 
 
-def stratify_by_sequence(names, fraction: float = TRAIN_FRACTION):
+def stratify_by_sequence(names, fraction: float = TRAIN_FRACTION, gap: int = 0):
     """Split frame indices per sequence, so every condition appears on both sides.
 
     Sequences of one frame are kept whole in training; every longer sequence
-    contributes at least one frame to evaluation.
+    contributes at least one frame to evaluation. ``gap`` drops that many frames
+    either side of the boundary, which is what the leakage check in
+    ``scripts/run_review_experiments.ps1`` uses: adjacent frames of one drive are
+    correlated, so a gap measures how much of a result survives when the two sides
+    cannot see each other. The reported protocol uses ``gap = 0``.
     """
     names = np.asarray(names)
     train: list[int] = []
@@ -180,8 +184,15 @@ def stratify_by_sequence(names, fraction: float = TRAIN_FRACTION):
             train.extend(index.tolist())
             continue
         cut = min(max(1, int(round(fraction * index.size))), index.size - 1)
-        train.extend(index[:cut].tolist())
-        test.extend(index[cut:].tolist())
+        # A short drive cannot afford the full gap: with 12 frames, 70/30 leaves four
+        # on the test side, and dropping four there would empty it. The gap is
+        # therefore clamped per sequence, so a drive either contributes a gap or keeps
+        # its boundary --- never a half-empty side.
+        gap_here = min(gap, cut - 1, index.size - cut - 1)
+        keep_train = index[:cut - gap_here]
+        keep_test = index[cut + gap_here:]
+        train.extend(keep_train.tolist())
+        test.extend(keep_test.tolist())
     return np.asarray(train, dtype=np.int64), np.asarray(test, dtype=np.int64)
 
 
@@ -246,6 +257,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--degradation-seed", type=int, default=0,
                         help="seed for the degradation operators, kept separate from the "
                              "training seed so that every run sees identical inputs")
+    parser.add_argument("--boundary-gap", type=int, default=0,
+                        help="frames dropped either side of each drive's train/test "
+                             "boundary; 0 is the reported protocol, and a positive value "
+                             "measures how much of a result rests on adjacent frames")
     parser.add_argument("--seed", type=int, default=0)
     return parser.parse_args(argv)
 
@@ -338,11 +353,13 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     total = len(scenes)
     targets = np.stack([occupancy_reference(scene, grid) for scene in scenes])
-    train_index, test_index = stratify_by_sequence(sequence_names, TRAIN_FRACTION)
+    train_index, test_index = stratify_by_sequence(sequence_names, TRAIN_FRACTION,
+                                                   args.boundary_gap)
     train_count = int(train_index.size)
     test = test_index
     print(f"\nframes   : {total} ({train_count} train / {test_index.size} test), "
-          f"split per sequence")
+          f"split per sequence"
+          + (f", boundary gap {args.boundary_gap}" if args.boundary_gap else ""))
 
     print("\nbuilding the degraded BEV stacks")
     channels = {level: channels_for_level(cfg, ladder, scenes, cameras, radars,
