@@ -49,6 +49,27 @@ are the ordinary `concat` rows.
 | gate+oracle | 3 | 0.6537 | 0.7003 | +0.0466 | +7.1% |
 | gate+oracle | 4 | 0.5343 | 0.6361 | +0.1018 | +19.1% |
 
+## Real weather, with and without injection
+
+Each drive keeps the weather it was recorded in. The `s=0` column is therefore
+an un-injected evaluation on real snow, rain, night and low-sun frames: it
+shows what the recorded weather costs *by itself*.
+
+| condition | runs | s=0 | s=1 | s=2 | s=3 | s=4 |
+|---|---:|---:|---:|---:|---:|---:|
+| clear | 4 | 0.9976 | 0.8851 | 0.7945 | 0.7024 | 0.6313 |
+| low_sun | 4 | 0.9984 | 0.8841 | 0.7918 | 0.6972 | 0.6277 |
+| night | 4 | 0.9981 | 0.8867 | 0.7881 | 0.6948 | 0.6314 |
+| rain | 4 | 0.9974 | 0.8770 | 0.7806 | 0.6865 | 0.6169 |
+| snowfall | 4 | 0.9958 | 0.8873 | 0.7942 | 0.7066 | 0.6554 |
+
+The `s=0` column is what anchors the ladder to real weather, and it is close to
+flat: the adverse drives score within about 0.002 of the clear ones for this
+target, against the 0.37 that the ladder removes at `s=4`. Two consequences
+follow, and both are stated in the paper: the coverage effect is about injected
+severity, and real-weather validation on these recordings is weakly identifiable
+because their weather is mild for a LiDAR-derived occupancy target.
+
 ## Detection, mAP at BEV IoU 0.5
 
 | trained on | structure | level | mAP@0.5 | sd over runs | mAP@0.3 |

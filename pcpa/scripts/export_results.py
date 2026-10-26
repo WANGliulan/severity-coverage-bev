@@ -260,9 +260,41 @@ def detection_mean_rows(records: list[dict]) -> list[list]:
                          f"{mean(mAP30):.4f}"])
     return rows
 
+def real_weather_rows(records: list[dict]) -> list[list]:
+    """Baseline IoU per real weather condition and per injected level.
+
+    Each drive keeps the weather it was recorded in, so a row answers two questions
+    at once: what the recorded weather costs on its own (``level == 0``, no
+    injection) and how the same drives respond to injection (levels 1--4). The
+    level-0 row is what anchors the ladder to real weather, and it is small: the
+    adverse drives score within 0.002 of the clear ones for this target.
+    """
+    symmetric = [record for record in records
+                 if not bool(record.get("args", {}).get("asymmetric"))
+                 and record.get("args", {}).get("train_levels") == FULL]
+    conditions: dict[str, dict[int, list[float]]] = {}
+    for record in symmetric:
+        for condition, ladder in record.get("iou_by_condition", {}).items():
+            for level in SEVERITY:
+                block = ladder.get(str(level))
+                value = block.get("baseline (concat)") if isinstance(block, dict) else block
+                if value is None:
+                    continue
+                conditions.setdefault(condition, {}).setdefault(level, []).append(float(value))
+
+    rows: list[list] = []
+    for condition in sorted(conditions):
+        levels = conditions[condition]
+        runs = max(len(values) for values in levels.values())
+        rows.append([condition, runs,
+                     *[f"{mean(levels[level]):.4f}" if levels.get(level) else ""
+                       for level in SEVERITY]])
+    return rows
+
 
 # --------------------------------------------------------------------- summary
 def summary_markdown(fusion_mean: list[list], coverage: list[list],
+                     real_weather: list[list],
                      detection_mean: list[list]) -> str:
     """The results summary, generated so it cannot drift from the CSVs."""
     lines = [
@@ -305,6 +337,27 @@ def summary_markdown(fusion_mean: list[list], coverage: list[list],
 
     lines += [
         "",
+        "## Real weather, with and without injection",
+        "",
+        "Each drive keeps the weather it was recorded in. The `s=0` column is therefore",
+        "an un-injected evaluation on real snow, rain, night and low-sun frames: it",
+        "shows what the recorded weather costs *by itself*.",
+        "",
+        "| condition | runs | s=0 | s=1 | s=2 | s=3 | s=4 |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for condition, runs, *values in real_weather:
+        lines.append(f"| {condition} | {runs} | " +
+                     " | ".join(str(value) for value in values) + " |")
+    lines += [
+        "",
+        "The `s=0` column is what anchors the ladder to real weather, and it is close to",
+        "flat: the adverse drives score within about 0.002 of the clear ones for this",
+        "target, against the 0.37 that the ladder removes at `s=4`. Two consequences",
+        "follow, and both are stated in the paper: the coverage effect is about injected",
+        "severity, and real-weather validation on these recordings is weakly identifiable",
+        "because their weather is mild for a LiDAR-derived occupancy target.",
+        "",
         "## Detection, mAP at BEV IoU 0.5",
         "",
         "| trained on | structure | level | mAP@0.5 | sd over runs | mAP@0.3 |",
@@ -329,6 +382,7 @@ def main() -> int:
 
     fusion_mean = fusion_mean_rows(fusion)
     coverage = coverage_rows(fusion)
+    real_weather = real_weather_rows(fusion)
     detection_mean = detection_mean_rows(detection)
 
     write_csv("fusion_runs.csv",
@@ -340,6 +394,9 @@ def main() -> int:
     write_csv("coverage_effect.csv",
               ["structure", "level", "runs_mild", "runs_full", "levels_0_2",
                "all_levels", "difference", "relative_percent"], coverage)
+    write_csv("real_weather.csv",
+              ["condition", "runs", *[f"s={level}" for level in SEVERITY]],
+              real_weather)
     write_csv("detection_runs.csv",
               ["run", "seed", "train_levels", "structure", "level", "iou",
                "map_at_0.5", "map_at_0.3", "detections_per_frame"],
@@ -350,7 +407,8 @@ def main() -> int:
 
     RESULTS.mkdir(parents=True, exist_ok=True)
     summary = RESULTS / "summary.md"
-    summary.write_text(summary_markdown(fusion_mean, coverage, detection_mean),
+    summary.write_text(summary_markdown(fusion_mean, coverage, real_weather,
+                                       detection_mean),
                        encoding="utf-8")
     print(f"{summary.relative_to(ROOT.parent).as_posix():<44} "
           f"{len(fusion)} fusion + {len(detection)} detection record(s)")
