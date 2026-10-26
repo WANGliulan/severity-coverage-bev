@@ -1,8 +1,8 @@
-# Severity Coverage for BEV Occupancy under Adverse Weather
+# Training Severity, Not Fusion Structure, Bounds BEV Occupancy in Adverse Weather
 
-Code and results for a study of what actually limits a cross-modal bird's-eye-view
-(BEV) occupancy stack when the weather turns: the fusion structure, or the severity
-levels the training set happens to contain.
+Code and results for a controlled study of what actually limits a cross-modal
+bird's-eye-view (BEV) occupancy stack when the weather turns: the fusion structure, or
+the severities the training set contains.
 
 Real Boreas recordings are replayed through a physically parameterized five-level
 degradation ladder (`s=0` clear to `s=4` worst), and three structures are trained on
@@ -10,7 +10,7 @@ the same split with the same degradation seed: a concatenated-fusion baseline
 (117,937 parameters), the same stack with a per-modality reliability gate (262,866
 parameters), and an oracle that hands the gate the true severity.
 
-**The structure is not the bottleneck. Coverage is.** A gate with 2.2× the
+**The structure is not the bottleneck. Training severity is.** A gate with 2.2× the
 parameters, even given the true severity, is indistinguishable from concatenation at
 the most severe level (0.634 / 0.636 / 0.636 IoU); training on levels 0–2 alone
 costs **0.087 IoU** (0.547 → 0.634), 16% relative and four times the run-to-run
