@@ -1,4 +1,4 @@
-# Training Severity, Not Fusion Structure, Bounds BEV Occupancy in Adverse Weather
+# Controlled Severity Coverage Training for Adverse Weather BEV Occupancy Prediction
 
 Code and results for a controlled study of what actually limits a cross-modal
 bird's-eye-view (BEV) occupancy stack when the weather turns: the fusion structure, or
@@ -143,4 +143,14 @@ built from.
 
 The paper source and the compiled manuscript are deliberately excluded. This
 repository is the code and the results only.
+
+## License
+
+The code and the derived results in this repository are released under the
+[MIT License](LICENSE); copyright (c) 2026 Yawen Tan, Miao Fan, and contributors.
+
+The license covers this repository only. The Boreas recordings are not
+redistributed here and stay under the terms of the
+[Boreas dataset](https://www.boreas.ca/); downloaded frames, degraded inputs and
+trained weights carry those upstream terms.
 
